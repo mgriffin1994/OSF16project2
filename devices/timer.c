@@ -109,7 +109,7 @@ timer_sleep (int64_t ticks)
   struct thread* t = thread_current();
   t->wakeup = timer_ticks() + ticks;
   list_remove(&t->elem);
-  list_insert_ordered(&sleep_list, &t->elem, &list_ticks_func, NULL); //ORDER NEEDED???
+  list_insert_ordered(&sleep_list, &t->elem, &list_ticks_func, NULL);
   thread_block(); 
   intr_set_level(old_level);  //have to turn off interrupts for thread_block
 }
