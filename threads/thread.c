@@ -84,6 +84,16 @@ static tid_t allocate_tid (void);
 
    It is not safe to call thread_current() until this function
    finishes. */
+
+//sorts from highest priority to lowest
+bool list_priority_func (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux)
+{
+  return list_entry(a, struct thread, elem)->priority > 
+      list_entry(b, struct thread, elem)->priority;
+}
+
 void
 thread_init (void) 
 {
@@ -198,7 +208,7 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
-  /* Add to run queue. */
+  /* Add to run queue. *///???
   thread_unblock (t);
 
   return tid;
@@ -230,14 +240,15 @@ thread_block (void)
    update other data. */
 void
 thread_unblock (struct thread *t) 
-{
+{ 
+  //should this prempt running thread now if higher eff_prior???
   enum intr_level old_level;
 
   ASSERT (is_thread (t));
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_push_back (&ready_list, &t->elem);   //insert in priority order???
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -308,7 +319,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_push_back (&ready_list, &cur->elem);   //insert in priortity order???
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -335,6 +346,7 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+  //???
   thread_current ()->priority = new_priority;
 }
 
@@ -342,6 +354,7 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void) 
 {
+  //???
   return thread_current ()->priority;
 }
 
@@ -462,7 +475,9 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  t->wakeup = -1;
+  t->base_prior = priority;
+  //t->wakeup = -1;
+  //??? priority donation stuff
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
@@ -579,7 +594,6 @@ allocate_tid (void)
 
   return tid;
 }
-
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);

@@ -87,12 +87,13 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
-bool sleep_list_less_func (const struct list_elem *a,
+//sorts from lowest wakeup time to highest
+bool list_ticks_func (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux)
 {
-  return list_entry(a, struct thread, elem)->priority < 
-      list_entry(b, struct thread, elem)->priority;
+  return list_entry(a, struct thread, elem)->wakeup < 
+      list_entry(b, struct thread, elem)->wakeup;
 }
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
@@ -100,18 +101,16 @@ bool sleep_list_less_func (const struct list_elem *a,
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
-
 //disable interrupts ???
   ASSERT (intr_get_level () == INTR_ON);
+  if (ticks <= 0) return;
+  enum intr_level old_level = intr_disable();
+  t->wakeup = timer_ticks() + ticks;
   struct thread* t = thread_current();
   list_remove(&t->elem);
-  t->wakeup = start + ticks;
-  //t->status = THREAD_BLOCKED;
-  //list_push_back(&sleep_list, &t->elem);
-  list_insert_ordered(&sleep_list, &t->elem, &sleep_list_less_func, NULL); //ORDER NEEDED???
-  //schedule(); //???
-  thread_block();   //???
+  list_insert_ordered(&sleep_list, &t->elem, &list_ticks_func, NULL); //ORDER NEEDED???
+  thread_block(); 
+  intr_set_level(old_level);  //have to turn off interrupts for thread_block
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -189,17 +188,21 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+  thread_tick ();
   struct list_elem* node = list_next(list_begin(&sleep_list));
   struct list_elem* tail = list_tail(&sleep_list);
   while(node != NULL && node != tail){
-  struct thread* t = list_entry(node, struct thread, elem);
-  if(t->wakeup == ticks){  
-    list_remove(node);
-    t->wakeup = -1;
-    thread_unblock(t);  //???
+    struct thread* t = list_entry(node, struct thread, elem);
+    if(t->wakeup <= ticks){  
+      list_remove(node);
+      //t->wakeup = -1;  
+      thread_unblock(t);  //???
+      //restart list???
+    } else {
+      break;
+    }
   }
-  }
-  thread_tick ();
+  //check if current running thread has lower priortity than head or ready list
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
