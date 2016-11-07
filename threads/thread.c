@@ -94,6 +94,24 @@ bool list_priority_func (const struct list_elem *a,
       list_entry(b, struct thread, elem)->priority;
 }
 
+//called when new thread is added to ready list
+void swap_running_thread(void){
+  if(list_empty(&ready_list)) return;
+  struct thread* t = list_entry(list_front(&ready_list), struct thread, elem);
+  struct thread* cur = thread_current();
+  if (t == NULL) return; //no ready threads
+  if(intr_context()){
+    ++thread_ticks;
+    if(cur->priority < t->priority || 
+      (cur->priority == t->priority && thread_ticks >= TIME_SLICE)){
+        intr_yield_on_return();
+    }
+  } else if (cur->priority < t->priority){
+    thread_yield();
+  }
+
+}
+
 void
 thread_init (void) 
 {
@@ -145,8 +163,8 @@ thread_tick (void)
     kernel_ticks++;
 
   /* Enforce preemption. */
-  if (++thread_ticks >= TIME_SLICE)
-    intr_yield_on_return ();
+  //if (++thread_ticks >= TIME_SLICE)
+    //intr_yield_on_return ();
 }
 
 /* Prints thread statistics. */
@@ -210,6 +228,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. *///???
   thread_unblock (t);
+  swap_running_thread();  //disable interrupts around it???
 
   return tid;
 }
@@ -248,7 +267,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);   //insert in priority order???
+  list_insert_ordered(&ready_list, &t->elem, &list_priority_func, NULL);
+  //list_push_back (&ready_list, &t->elem);   //insert in priority order???
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -319,7 +339,8 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);   //insert in priortity order???
+    list_insert_ordered(&ready_list, &cur->elem, &list_priority_func, NULL);
+    //list_push_back (&ready_list, &cur->elem);   //insert in priortity order???
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -346,7 +367,7 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  //???
+  //??? 
   thread_current ()->priority = new_priority;
 }
 

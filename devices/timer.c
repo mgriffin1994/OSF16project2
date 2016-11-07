@@ -37,9 +37,9 @@ static void real_time_delay (int64_t num, int32_t denom);
 void
 timer_init (void) 
 {
-  list_init(&sleep_list);
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init(&sleep_list);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -105,8 +105,9 @@ timer_sleep (int64_t ticks)
   ASSERT (intr_get_level () == INTR_ON);
   if (ticks <= 0) return;
   enum intr_level old_level = intr_disable();
-  t->wakeup = timer_ticks() + ticks;
+  
   struct thread* t = thread_current();
+  t->wakeup = timer_ticks() + ticks;
   list_remove(&t->elem);
   //inserting in amount of ticks to wait order.. the larger amounts of ticks you wait the more in the back you are
   list_insert_ordered(&sleep_list, &t->elem, &list_ticks_func, NULL);
@@ -196,14 +197,14 @@ timer_interrupt (struct intr_frame *args UNUSED)
     struct thread* t = list_entry(node, struct thread, elem);
     if(t->wakeup <= ticks){  
       list_remove(node);
-      t->wakeup=-1;
-      thread_unblock(t);  
-      node=list_begin(&sleep_list);
-    } 
-    else {
-      break;
-    }
+      //t->wakeup = -1;  
+      thread_unblock(t);  //???
+      node = list_begin(&sleep_list);  //have to reset node since removed
+      //restart list???
+    } else break;
   }
+  //thread_tick();
+  swap_running_thread();
   //check if current running thread has lower priortity than head or ready list
 }
 
