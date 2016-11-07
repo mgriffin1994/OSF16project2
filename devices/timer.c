@@ -7,6 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include <list.h>
   
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -19,6 +20,7 @@
 
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
+struct list sleep_list;
 
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
@@ -35,6 +37,7 @@ static void real_time_delay (int64_t num, int32_t denom);
 void
 timer_init (void) 
 {
+  list_init(&sleep_list);
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
@@ -84,6 +87,14 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
+bool sleep_list_less_func (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux)
+{
+  return list_entry(a, struct thread, elem)->priority < 
+      list_entry(b, struct thread, elem)->priority;
+}
+
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void
@@ -91,9 +102,16 @@ timer_sleep (int64_t ticks)
 {
   int64_t start = timer_ticks ();
 
+//disable interrupts ???
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  struct thread* t = thread_current();
+  list_remove(&t->elem);
+  t->wakeup = start + ticks;
+  //t->status = THREAD_BLOCKED;
+  //list_push_back(&sleep_list, &t->elem);
+  list_insert_ordered(&sleep_list, &t->elem, &sleep_list_less_func, NULL); //ORDER NEEDED???
+  //schedule(); //???
+  thread_block();   //???
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -165,12 +183,22 @@ timer_print_stats (void)
 {
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
+
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+  struct list_elem* node = list_next(list_begin(&sleep_list));
+  struct list_elem* tail = list_tail(&sleep_list);
+  while(node != NULL && node != tail){
+  struct thread* t = list_entry(node, struct thread, elem);
+  if(t->wakeup == ticks){  
+    list_remove(node);
+    t->wakeup = -1;
+    thread_unblock(t);  //???
+  }
+  }
   thread_tick ();
 }
 
