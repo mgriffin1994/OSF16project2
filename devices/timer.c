@@ -108,7 +108,7 @@ timer_sleep (int64_t ticks)
   t->wakeup = timer_ticks() + ticks;
   struct thread* t = thread_current();
   list_remove(&t->elem);
-  list_insert_ordered(&sleep_list, &t->elem, &list_ticks_func, NULL); //ORDER NEEDED???
+  list_insert_ordered(&sleep_list, &t->elem, &list_ticks_func, NULL);
   thread_block(); 
   intr_set_level(old_level);  //have to turn off interrupts for thread_block
 }
@@ -189,16 +189,17 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-  struct list_elem* node = list_next(list_begin(&sleep_list));
+  struct list_elem* node = list_begin(&sleep_list);
   struct list_elem* tail = list_tail(&sleep_list);
   while(node != NULL && node != tail){
     struct thread* t = list_entry(node, struct thread, elem);
     if(t->wakeup <= ticks){  
       list_remove(node);
-      //t->wakeup = -1;  
-      thread_unblock(t);  //???
-      //restart list???
-    } else {
+      t->wakeup=-1;
+      thread_unblock(t);  
+      node=list_begin(&sleep_list);
+    } 
+    else {
       break;
     }
   }
