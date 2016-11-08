@@ -73,7 +73,9 @@ sema_down (struct semaphore *sema)
   while (sema->value == 0) 
     {
       if(t->priority>sema->owner->priority){
-        sema->ownerPriorityBeforeDonation=sema->owner->priority;
+        if(sema->donator==NULL){
+          sema->ownerPriorityBeforeDonation=sema->owner->priority;
+        }
         sema->owner->priority=t->priority;
       }
         list_insert_ordered(&sema->waiters, &t->elem, &list_priority_func, NULL);
