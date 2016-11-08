@@ -101,14 +101,13 @@ bool list_ticks_func (const struct list_elem *a,
 void
 timer_sleep (int64_t ticks) 
 {
-//disable interrupts ???
   ASSERT (intr_get_level () == INTR_ON);
   if (ticks <= 0) return;
   enum intr_level old_level = intr_disable();
   
   struct thread* t = thread_current();
   t->wakeup = timer_ticks() + ticks;
-  list_remove(&t->elem);
+  //list_remove(&t->elem);
   list_insert_ordered(&sleep_list, &t->elem, &list_ticks_func, NULL);
   thread_block(); 
   intr_set_level(old_level);  //have to turn off interrupts for thread_block
@@ -166,6 +165,7 @@ timer_udelay (int64_t us)
 
 /* Sleeps execution for approximately NS nanoseconds.  Interrupts
    need not be turned on.
+
 
    Busy waiting wastes CPU cycles, and busy waiting with
    interrupts off for the interval between timer ticks or longer

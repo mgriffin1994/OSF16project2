@@ -99,9 +99,9 @@ void swap_running_thread(void){
   if(list_empty(&ready_list)) return;
   struct thread* t = list_entry(list_front(&ready_list), struct thread, elem);
   struct thread* cur = thread_current();
-  if (t == NULL) return; //no ready threads
+  //if (t == NULL) return; //no ready threads
   if(intr_context()){
-    ++thread_ticks;
+    thread_ticks++;
     if(cur->priority < t->priority || 
       (cur->priority == t->priority && thread_ticks >= TIME_SLICE)){
         intr_yield_on_return();
@@ -228,7 +228,10 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. *///???
   thread_unblock (t);
+
+  enum intr_level old_level = intr_disable ();
   swap_running_thread();  //disable interrupts around it???
+  intr_set_level (old_level);
 
   return tid;
 }
@@ -260,7 +263,6 @@ thread_block (void)
 void
 thread_unblock (struct thread *t) 
 { 
-  //should this prempt running thread now if higher eff_prior???
   enum intr_level old_level;
 
   ASSERT (is_thread (t));
