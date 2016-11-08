@@ -48,6 +48,9 @@ sema_init (struct semaphore *sema, unsigned value)
 
   sema->value = value;
   list_init (&sema->waiters);
+    sema->owner=NULL;
+    sema->donator=NULL;
+    sema->ownerPriorityBeforeDonation=-1;
 }
 
 /* Down or "P" operation on a semaphore.  Waits for SEMA's value
@@ -66,12 +69,20 @@ sema_down (struct semaphore *sema)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
+  struct thread* t= thread_current();
   while (sema->value == 0) 
     {
-      //change priority???
-      list_insert_ordered (&sema->waiters, &thread_current ()->elem, &list_priority_func, NULL);
+      if(t->priority>sema->owner->priority){
+        if(sema->donator==NULL){
+          sema->ownerPriorityBeforeDonation=sema->owner->priority;
+        }
+        sema->owner->priority=t->priority;
+      }
+        list_insert_ordered(&sema->waiters, &t->elem, &list_priority_func, NULL);
+      //list_push_back (&sema->waiters, &thread_current ()->elem);
       thread_block ();
     }
+    sema->owner=thread_current();
   sema->value--;
   intr_set_level (old_level);
 }
@@ -115,7 +126,10 @@ sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) {
-    //should be sorted by priotiry already
+    if(sema->donator!=NULL){
+      sema->owner->priority=sema->ownerPriorityBeforeDonation;
+      sema->donator=NULL;
+    }
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
   }
