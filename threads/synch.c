@@ -100,6 +100,10 @@ sema_down (struct semaphore *sema)
         sema->owner->highestPriority[sema->owner->numOfLocks]=sema;
         sema->owner->numOfLocks++;
       }
+      //using it as a semaphore initialized 
+      else{
+        t->waitList=&sema->waiters;
+      }
       list_insert_ordered(&sema->waiters, &t->elem, &list_priority_func, NULL);
       //list_push_back (&sema->waiters, &thread_current ()->elem);
       thread_block ();
@@ -169,6 +173,7 @@ sema_up (struct semaphore *sema)
     }
          sema->donator=NULL;
     struct thread* t=list_entry(list_pop_front(&sema->waiters),struct thread, elem);
+    t->waitList=NULL;
  //   sema->owner=t;
     thread_unblock (t);
   }
