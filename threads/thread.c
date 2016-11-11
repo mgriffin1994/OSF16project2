@@ -505,6 +505,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->base_prior = priority;
   t->numOfLocks=0;
   t->dependsOn=NULL;
+  t->baselinePriority=t->priority;
   //t->wakeup = -1;
   //??? priority donation stuff
   t->magic = THREAD_MAGIC;

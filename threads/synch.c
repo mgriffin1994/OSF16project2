@@ -78,11 +78,15 @@ sema_down (struct semaphore *sema)
  
         }
         sema->donator=t;
-        //struct thread* depedents=sema->owner->dependsOn;
-        //while(depedents!=null){
-
-       // }
+        sema->donator->dependsOn=sema->owner;
         sema->owner->priority=t->priority;
+        struct thread* x=sema->owner;
+        while(x->dependsOn!=NULL){
+           x=x->dependsOn;
+          x->priority=t->priority;
+        }
+   
+
         sema->owner->highestPriority[sema->owner->numOfLocks]=sema;
         sema->owner->numOfLocks++;
       }
@@ -137,7 +141,7 @@ sema_up (struct semaphore *sema)
   if (!list_empty (&sema->waiters)) {
     if(sema->donator!=NULL && sema->owner->highestPriority[sema->owner->numOfLocks-1]==sema){
         if(sema->owner->numOfLocks==1){
-        sema->owner->priority=PRI_DEFAULT;
+        sema->owner->priority=sema->owner->baselinePriority;
       }else{
       sema->owner->priority=sema->ownerPriorityBeforeDonation;
     }

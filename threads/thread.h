@@ -97,6 +97,7 @@ struct thread
       struct semaphore* highestPriority[10];
       int numOfLocks;
       struct thread* dependsOn;
+      int baselinePriority;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
