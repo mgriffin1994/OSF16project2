@@ -98,6 +98,7 @@ struct thread
       int numOfLocks;
       struct thread* dependsOn;
       int baselinePriority;
+      struct list* waitList;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */

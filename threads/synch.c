@@ -72,31 +72,41 @@ sema_down (struct semaphore *sema)
   struct thread* t= thread_current();
   while (sema->value == 0) 
     {
+      //if someone owns this lock and we have a higher priority
       if(sema->owner!=NULL && t->priority>sema->owner->priority){
+        //a middle test exists do not need to save that priority 
         if(sema->donator==NULL){
           sema->ownerPriorityBeforeDonation=sema->owner->priority;
  
         }
         sema->donator=t;
+        sema->donator->waitList=&sema->waiters;
         sema->donator->dependsOn=sema->owner;
         sema->owner->priority=t->priority;
+        if(sema->owner->waitList!=NULL){
+          list_sort (sema->owner->waitList, &list_priority_func, NULL);
+        //  list_insert_ordered(sema->owner->waitList,&sema->owner->elem,&list_priority_func,NULL);
+        }
         struct thread* x=sema->owner;
         while(x->dependsOn!=NULL){
            x=x->dependsOn;
-          x->priority=t->priority;
-        }
-   
+           x->priority=t->priority;
+           if(x->waitList!=NULL){
+          //    list_insert_ordered(x->waitList,&x->elem,&list_priority_func,NULL);
+                list_sort (sema->owner->waitList, &list_priority_func, NULL);
 
+           }
+        }
         sema->owner->highestPriority[sema->owner->numOfLocks]=sema;
         sema->owner->numOfLocks++;
       }
-        list_insert_ordered(&sema->waiters, &t->elem, &list_priority_func, NULL);
+      list_insert_ordered(&sema->waiters, &t->elem, &list_priority_func, NULL);
       //list_push_back (&sema->waiters, &thread_current ()->elem);
       thread_block ();
     }
     sema->owner=thread_current();
-  sema->value--;
-  intr_set_level (old_level);
+    sema->value--;
+    intr_set_level (old_level);
 }
 
 /* Down or "P" operation on a semaphore, but only if the
