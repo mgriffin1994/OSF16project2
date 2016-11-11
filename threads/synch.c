@@ -78,7 +78,13 @@ sema_down (struct semaphore *sema)
  
         }
         sema->donator=t;
+        //struct thread* depedents=sema->owner->dependsOn;
+        //while(depedents!=null){
+
+       // }
         sema->owner->priority=t->priority;
+        sema->owner->highestPriority[sema->owner->numOfLocks]=sema;
+        sema->owner->numOfLocks++;
       }
         list_insert_ordered(&sema->waiters, &t->elem, &list_priority_func, NULL);
       //list_push_back (&sema->waiters, &thread_current ()->elem);
@@ -129,10 +135,25 @@ sema_up (struct semaphore *sema)
   old_level = intr_disable ();
   sema->value++;
   if (!list_empty (&sema->waiters)) {
-    if(sema->donator!=NULL){
+    if(sema->donator!=NULL && sema->owner->highestPriority[sema->owner->numOfLocks-1]==sema){
+        if(sema->owner->numOfLocks==1){
+        sema->owner->priority=PRI_DEFAULT;
+      }else{
       sema->owner->priority=sema->ownerPriorityBeforeDonation;
-      sema->donator=NULL;
     }
+      sema->owner->highestPriority[sema->owner->numOfLocks-1]==0;
+      sema->owner->numOfLocks--;
+      }
+    else if(sema->donator!=NULL && sema->owner->highestPriority[sema->owner->numOfLocks-1]!=sema){
+      int i=sema->owner->numOfLocks-2;
+      while(i>=0){
+        sema->owner->highestPriority[i]=sema->owner->highestPriority[i+1];
+        sema->owner->highestPriority[i+1]=0;
+        i--;
+      }
+      sema->owner->numOfLocks--;
+    }
+         sema->donator=NULL;
     struct thread* t=list_entry(list_pop_front(&sema->waiters),struct thread, elem);
  //   sema->owner=t;
     thread_unblock (t);
