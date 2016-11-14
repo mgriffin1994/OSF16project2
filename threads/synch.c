@@ -174,6 +174,10 @@ sema_up (struct semaphore *sema)
          sema->donator=NULL;
     struct thread* t=list_entry(list_pop_front(&sema->waiters),struct thread, elem);
     t->waitList=NULL;
+    if(thread_current()->futurePriority!=-1){
+      thread_current()->priority=thread_current()->futurePriority;
+      thread_current()->futurePriority=-1;
+    }
  //   sema->owner=t;
     thread_unblock (t);
   }
@@ -362,7 +366,7 @@ cond_wait (struct condition *cond, struct lock *lock)
   sema_init (&waiter.semaphore, 0);
   //insert in some order???
   list_push_back (&cond->waiters, &waiter.elem);
-  lock_release (lock);
+    lock_release (lock);
   sema_down (&waiter.semaphore);
   lock_acquire (lock);
 }

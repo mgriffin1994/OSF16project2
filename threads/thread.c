@@ -370,6 +370,10 @@ void
 thread_set_priority (int new_priority) 
 {
   struct thread* t = thread_current();
+  if(t->numOfLocks>0){
+    t->futurePriority=new_priority;
+    return;
+  }
   int oldPriority=t->priority;
   t->priority=new_priority;
   if(new_priority<oldPriority){
@@ -507,6 +511,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->dependsOn=NULL;
   t->baselinePriority=t->priority;
   t->waitList=NULL;
+  t->futurePriority=-1;
   //t->wakeup = -1;
   //??? priority donation stuff
   t->magic = THREAD_MAGIC;
