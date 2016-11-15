@@ -37,8 +37,8 @@ test_priority_condvar (void)
     {
       lock_acquire (&lock);
       msg ("Signaling...");
-      cond_signal (&condition, &lock);  //main set back to 30 after this
-      lock_release (&lock);   //main set back to 31 after this and then stays 31, done in sema up set to baselinepriority
+      cond_signal (&condition, &lock);
+      lock_release (&lock);
     }
 }
 
