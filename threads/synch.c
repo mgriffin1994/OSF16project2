@@ -154,14 +154,15 @@ sema_up (struct semaphore *sema)
   sema->value++;
   if (!list_empty (&sema->waiters)) {
     if(sema->donator!=NULL && sema->owner->highestPriority[sema->owner->numOfLocks-1]==sema){
-        if(sema->owner->numOfLocks==1){
-        sema->owner->priority=sema->owner->baselinePriority;
-      }else{
-      sema->owner->priority=sema->ownerPriorityBeforeDonation;
+        /*if(sema->owner->numOfLocks==1){
+          sema->owner->priority=sema->owner->baselinePriority;
+        }
+        else{*/
+          sema->owner->priority=sema->ownerPriorityBeforeDonation;
+        //}
+        sema->owner->highestPriority[sema->owner->numOfLocks-1]==0;
+        sema->owner->numOfLocks--;
     }
-      sema->owner->highestPriority[sema->owner->numOfLocks-1]==0;
-      sema->owner->numOfLocks--;
-      }
     else if(sema->donator!=NULL && sema->owner->highestPriority[sema->owner->numOfLocks-1]!=sema){
       int i=sema->owner->numOfLocks-2;
       while(i>=0){
@@ -171,7 +172,7 @@ sema_up (struct semaphore *sema)
       }
       sema->owner->numOfLocks--;
     }
-         sema->donator=NULL;
+    sema->donator=NULL;
     struct thread* t=list_entry(list_pop_front(&sema->waiters),struct thread, elem);
     t->waitList=NULL;
     if(thread_current()->futurePriority!=-1){
